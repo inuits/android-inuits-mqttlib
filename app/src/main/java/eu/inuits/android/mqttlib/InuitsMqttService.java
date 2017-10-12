@@ -22,23 +22,19 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+import java.util.zip.InflaterInputStream;
 
 
 public class InuitsMqttService extends IntentService {
 
     private static String TAG = InuitsMqttService.class.toString();
 
+    private static Integer DEFAULT_QOS = 1;
+
     /* VARIABLE DEFINITION */
     private static MqttAndroidClient mqttAndroidClient;
-    
     private static Map<String, Integer> topics = new HashMap<>();
-
-    private static final String serverUri = "wss://api-dev.mundosalsa.eu:443";
-    private static final String clientId = "ExampleAndroidClient";
-
-    private static final String subscriptionTopic = "testtopic/inuits";
-    private static final String publishTopic = "testtopic/inuits";
-    private static final String publishMessage = "Hello World!";
 
     /* CONSTRUCTORS */
     public InuitsMqttService() {
@@ -51,11 +47,6 @@ public class InuitsMqttService extends IntentService {
 
     /* OVERRIDDEN IntentService METHODS */
 //    @Override
-//    public void onCreate() {
-//        super.onCreate();
-//    }
-//
-//    @Override
 //    public int onStartCommand(Intent intent, int flags, int startId) {
 //        super.onStartCommand(intent, flags, startId);
 //
@@ -66,18 +57,67 @@ public class InuitsMqttService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent workIntent) {
-        // Gets data from the incoming Intent
-        String dataString = workIntent.getDataString();
 
-        Log.d(TAG, "Received intent: "+ dataString);
+        String action = workIntent.getStringExtra(Constants.ACTION);
+        Log.d(TAG, "Received intent of type: "+ action);
 
-        // TODO here be dragons
+        String serverUri = null;
+        String clientId = null;
+        String topic = null;
+        Integer qos = null;
+        switch (action) {
+            case Constants.ACTION_CONNECT:
+                // Obtain more data
+                serverUri = workIntent.getStringExtra(Constants.DATA_SERVER_URI);
+                clientId = workIntent.getStringExtra(Constants.DATA_CLIENT_ID);
 
-        this.initClient(InuitsMqttService.serverUri, InuitsMqttService.clientId);
-        this.connect();
+                if (serverUri == null) {
+                    Log.e(TAG, "Server URI not specified, can't connect. Aborting!");
+                } else {
+                    if(clientId == null) {
+                        clientId = UUID.randomUUID().toString();
+                        Log.w(TAG, "Client ID not specified, generating random UUID: " + clientId);
+                    }
+                    this.initClient(serverUri, clientId);
+                    this.connect();
+                }
+                break;
 
-        this.publish(InuitsMqttService.publishTopic, "Here be dragons!");
+            case Constants.ACTION_DISCONNECT:
+                this.disconnect();
+                break;
 
+            case Constants.ACTION_SUBSCRIBE:
+                // Obtain more data
+                topic = workIntent.getStringExtra(Constants.DATA_TOPIC);
+                qos = workIntent.getIntExtra(Constants.DATA_QOS, InuitsMqttService.DEFAULT_QOS);
+
+                if (topic == null) {
+                    Log.e(TAG, "Topic not specified, can't subscribe to unknown topic. Aborting!");
+                } else {
+                    this.subscribe(topic, qos);
+                }
+                break;
+
+            case Constants.ACTION_UNSUBSCRIBE:
+                topic = workIntent.getStringExtra(Constants.DATA_TOPIC);
+
+                if (topic == null) {
+                    Log.e(TAG, "Topic not specified, can't unsubscribe from unknown topic. Aborting!");
+                } else {
+                    this.unsubscribe(topic);
+                }
+                break;
+
+            case Constants.ACTION_PUBLISH:
+                topic = workIntent.getStringExtra(Constants.DATA_TOPIC);
+                if (topic == null) {
+                    Log.e(TAG, "Topic not specified, can't publish to unknown topic. Aborting!");
+                } else {
+                    this.publish("testtopic/inuits", workIntent.getDataString());
+                }
+                break;
+        }
     }
 
     /* CUSTOM METHODS */
@@ -96,7 +136,6 @@ public class InuitsMqttService extends IntentService {
         }
         if (InuitsMqttService.mqttAndroidClient == null) {
             InuitsMqttService.mqttAndroidClient = new MqttAndroidClient(getApplicationContext(), serverUri, clientId);
-            InuitsMqttService.topics.put("testtopic/inuits", 0);
 
             this.setupCallbacks();
         }
@@ -164,8 +203,72 @@ public class InuitsMqttService extends IntentService {
                     e.printStackTrace();
                 }
             }
+        } else {
+            Log.w(TAG, "mqttAndroidClient not initialized!");
         }
     }
+
+    private void subscribe(String topic) {
+        this.subscribe(topic, InuitsMqttService.DEFAULT_QOS);
+    }
+    private void subscribe(String topic, Integer qos) {
+        if (InuitsMqttService.mqttAndroidClient == null) {
+            Log.w(TAG, "mqttAndroidClient not initialized!");
+            return;
+        }
+
+        if (topic == null) {
+            Log.e(TAG, "Topic not specified, can't publish to unknown topic. Aborting!");
+            return;
+        }
+
+        if (qos == null) {
+            qos = InuitsMqttService.DEFAULT_QOS;
+            Log.w(TAG, "Qos is not set. Defaulting to: " + qos);
+        }
+        try {
+            InuitsMqttService.topics.put(topic, qos);
+            if (InuitsMqttService.mqttAndroidClient.isConnected()) {
+                InuitsMqttService.mqttAndroidClient.subscribe(topic, qos, null, new IMqttActionListener() {
+                    @Override
+                    public void onSuccess(IMqttToken asyncActionToken) {
+                        Log.d(TAG, "Successfully subscribed to topic.");
+                    }
+
+                    @Override
+                    public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                        Log.d(TAG, "Failed to subscribed to topic.");
+                    }
+                });
+            }
+
+        } catch (MqttException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private void unsubscribe(String topic) {
+        if (InuitsMqttService.mqttAndroidClient == null) {
+            Log.w(TAG, "mqttAndroidClient not initialized!");
+            return;
+        }
+
+        if (topic == null) {
+            Log.w(TAG, "Topic variable is null. Can't unsubscribe to that!");
+            return;
+        }
+
+        try {
+            InuitsMqttService.topics.remove(topic);
+            if (InuitsMqttService.mqttAndroidClient.isConnected()) {
+                InuitsMqttService.mqttAndroidClient.unsubscribe(topic);
+            }
+        } catch (MqttException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     /**
      * TODO: This needs to be rewritten for proper options
@@ -183,8 +286,13 @@ public class InuitsMqttService extends IntentService {
      * This method will connect to MQTT and subscribe to topics
      */
     public void connect() {
+        if (InuitsMqttService.mqttAndroidClient == null) {
+            Log.w(TAG, "mqttAndroidClient not initialized!");
+            return;
+        }
+
         try {
-            Log.d(TAG, "Connecting to: " + serverUri);
+            Log.d(TAG, "Connecting to: " + InuitsMqttService.mqttAndroidClient.getServerURI());
             
             InuitsMqttService.mqttAndroidClient.connect(this.getMqttConnectOptions(), null, new IMqttActionListener() {
                 @Override
@@ -201,11 +309,25 @@ public class InuitsMqttService extends IntentService {
 
                 @Override
                 public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
-                    Log.d(TAG, "Failed to connect to: " + serverUri);
+                    Log.d(TAG, "Failed to connect to: " + InuitsMqttService.mqttAndroidClient.getServerURI());
                 }
             });
         } catch (MqttException ex){
             ex.printStackTrace();
+        }
+    }
+
+    public void disconnect(){
+        if (InuitsMqttService.mqttAndroidClient == null) {
+            Log.w(TAG, "mqttAndroidClient not initialized!");
+            return;
+        }
+        try {
+            if (InuitsMqttService.mqttAndroidClient.isConnected()) {
+                InuitsMqttService.mqttAndroidClient.disconnect();
+            }
+        } catch (MqttException e) {
+            e.printStackTrace();
         }
     }
 
@@ -217,12 +339,31 @@ public class InuitsMqttService extends IntentService {
     }
 
     public void publish(String topic, MqttMessage mqttMessage) {
-        if (topic != null && mqttMessage != null){
-            try {
-                InuitsMqttService.mqttAndroidClient.publish(topic, mqttMessage);
-            } catch (MqttException e) {
-                e.printStackTrace();
+        if (InuitsMqttService.mqttAndroidClient == null) {
+            Log.w(TAG, "mqttAndroidClient not initialized!");
+            return;
+        }
+
+        if (topic == null || mqttMessage == null) {
+            Log.e(TAG, "Can't publish message because topic or content of message is not set!");
+            return;
+        }
+        try {
+            if (InuitsMqttService.mqttAndroidClient.isConnected()) {
+                InuitsMqttService.mqttAndroidClient.publish(topic, mqttMessage, null, new IMqttActionListener() {
+                    @Override
+                    public void onSuccess(IMqttToken asyncActionToken) {
+                        Log.d(TAG, "Successfully published to topic.");
+                    }
+
+                    @Override
+                    public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                        Log.d(TAG, "Failed to publish to topic.");
+                    }
+                });
             }
+        } catch (MqttException e) {
+            e.printStackTrace();
         }
     }
 }
