@@ -31,9 +31,10 @@ public final class Constants {
 
 
     /* INTENT BROADCASTS */
-    public static final String MESSAGE_RECEIVED = "eu.inuits.android.mqttlib.MESSAGE_RECEIVED";
+    public static final String MESSAGE_RECEIVED = "android.intent.action.MQTT_MESSAGE_RECEIVED";
 
     /* INTENT DATA */
+    public static final String MESSAGE_TOPIC = "eu.inuits.android.mqttlib.MESSAGE_TOPIC";
     public static final String MESSAGE_DATA = "eu.inuits.android.mqttlib.MESSAGE_DATA";
 
 }

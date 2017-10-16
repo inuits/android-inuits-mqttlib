@@ -12,49 +12,38 @@ public class InuitsMqttControler {
 
     public void init(Context context) {
         this.context = context;
-
-    }
-
-    public boolean start (Context context) {
-        Intent mqttServiceIntent = null;
-
-        mqttServiceIntent = new Intent(this.context, InuitsMqttService.class);
-        mqttServiceIntent.putExtra(Constants.ACTION, Constants.ACTION_PUBLISH);
-        mqttServiceIntent.putExtra(Constants.DATA_TOPIC, "testtopic/inuits");
-        mqttServiceIntent.setData(Uri.parse("test"));
-        context.startService(mqttServiceIntent);
-
-        return true;
     }
 
     public void connect(String uri) {
-        connect(uri,"ExampleAndroidClient");
+        connect(uri, null);
     }
 
-    public void connect (String uri, String clientId) {
+    public void connect(String uri, String clientId) {
         Intent mqttServiceIntent = null;
 
-        Log.w("CONNECT URI:", uri);
+        Log.d("CONNECT URI:", uri);
 
         mqttServiceIntent = new Intent(this.context, InuitsMqttService.class);
         mqttServiceIntent.putExtra(Constants.ACTION,Constants.ACTION_CONNECT);
         mqttServiceIntent.putExtra(Constants.DATA_SERVER_URI,uri);
         mqttServiceIntent.putExtra(Constants.DATA_CLIENT_ID,clientId);
-        context.startService(mqttServiceIntent);
-
+        this.context.startService(mqttServiceIntent);
 
         CharSequence text = "Connected!";
         int duration = Toast.LENGTH_SHORT;
-
         Toast toast = Toast.makeText(this.context, text, duration);
         toast.show();
     }
 
-    public void disconnect () {
-        //TODO: disconnect function
+    public void disconnect() {
+        Intent mqttServiceIntent = null;
+
+        mqttServiceIntent = new Intent(this.context, InuitsMqttService.class);
+        mqttServiceIntent.putExtra(Constants.ACTION,Constants.ACTION_DISCONNECT);
+        this.context.startService(mqttServiceIntent);
+
         CharSequence text = "Disconnected!";
         int duration = Toast.LENGTH_SHORT;
-
         Toast toast = Toast.makeText(this.context, text, duration);
         toast.show();
     }
@@ -63,49 +52,48 @@ public class InuitsMqttControler {
         return subscribe(topic, 1);
     }
 
-    public Intent subscribe (String topic, int qos) {
+    public Intent subscribe(String topic, int qos) {
         Intent mqttServiceIntent = null;
 
         mqttServiceIntent = new Intent(this.context, InuitsMqttService.class);
         mqttServiceIntent.putExtra(Constants.ACTION, Constants.ACTION_SUBSCRIBE);
-        mqttServiceIntent.putExtra(Constants.DATA_TOPIC, "testtopic/inuits");
+        mqttServiceIntent.putExtra(Constants.DATA_TOPIC, topic);
+        mqttServiceIntent.putExtra(Constants.DATA_QOS, qos);
         this.context.startService(mqttServiceIntent);
 
         CharSequence text = "Subscribed!";
-
         int duration = Toast.LENGTH_SHORT;
-
         Toast toast = Toast.makeText(this.context, text, duration);
         toast.show();
 
         return mqttServiceIntent;
     }
 
-    public void unsubscribe (String topic) {
+    public void unsubscribe(String topic) {
         Intent mqttServiceIntent = null;
 
         mqttServiceIntent = new Intent(this.context, InuitsMqttService.class);
         mqttServiceIntent.putExtra(Constants.ACTION, Constants.ACTION_UNSUBSCRIBE);
-        mqttServiceIntent.putExtra(Constants.DATA_TOPIC, "testtopic/inuits");
-        mqttServiceIntent.setData(Uri.parse("test"));
+        mqttServiceIntent.putExtra(Constants.DATA_TOPIC, topic);
         this.context.startService(mqttServiceIntent);
 
-
+        CharSequence text = "Unsubscribed!";
+        int duration = Toast.LENGTH_SHORT;
+        Toast toast = Toast.makeText(this.context, text, duration);
+        toast.show();
     }
 
-    public void publish (String topic, String message) {
+    public void publish(String topic, String message) {
         Intent mqttServiceIntent = null;
 
         mqttServiceIntent = new Intent(this.context, InuitsMqttService.class);
         mqttServiceIntent.putExtra(Constants.ACTION, Constants.ACTION_PUBLISH);
-        mqttServiceIntent.putExtra(Constants.DATA_TOPIC, "testtopic/inuits");
-        mqttServiceIntent.setData(Uri.parse("test"));
+        mqttServiceIntent.putExtra(Constants.DATA_TOPIC, topic);
+        mqttServiceIntent.setData(Uri.parse(message));
         this.context.startService(mqttServiceIntent);
-
 
         CharSequence text = "Published!";
         int duration = Toast.LENGTH_SHORT;
-
         Toast toast = Toast.makeText(this.context, text, duration);
         toast.show();
     }

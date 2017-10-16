@@ -2,7 +2,6 @@ package eu.inuits.android.mqttlib;
 
 import android.app.IntentService;
 import android.content.Intent;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import org.eclipse.paho.android.service.MqttAndroidClient;
@@ -14,16 +13,10 @@ import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.eclipse.paho.client.mqttv3.util.Strings;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
-import java.util.zip.InflaterInputStream;
 
 
 public class InuitsMqttService extends IntentService {
@@ -114,7 +107,7 @@ public class InuitsMqttService extends IntentService {
                 if (topic == null) {
                     Log.e(TAG, "Topic not specified, can't publish to unknown topic. Aborting!");
                 } else {
-                    this.publish("testtopic/inuits", workIntent.getDataString());
+                    this.publish(topic, workIntent.getDataString());
                 }
                 break;
         }
@@ -147,7 +140,7 @@ public class InuitsMqttService extends IntentService {
      * Mainly it is used for setup Message received callback.
      */
     public void setupCallbacks() {
-        final LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(this);
+//        final LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(this);
         
         InuitsMqttService.mqttAndroidClient.setCallback(new MqttCallbackExtended() {
 
@@ -166,6 +159,10 @@ public class InuitsMqttService extends IntentService {
 
             @Override
             public void connectionLost(Throwable cause) {
+                if (cause == null) {
+                    Log.i(TAG, "Connection lost due to unknown cause, possibly disconnect!");
+                    return;
+                }
                 Log.w(TAG, "Connection lost due to: " + cause.toString());
             }
 
@@ -173,14 +170,7 @@ public class InuitsMqttService extends IntentService {
             public void messageArrived(String topic, MqttMessage message) throws Exception {
                 String payload = new String(message.getPayload());
                 Log.d(TAG, "Incomming message: " + payload);
-
-                Intent localIntent =
-                        new Intent(Constants.MESSAGE_RECEIVED)
-                                // Puts the status into the Intent
-                                .putExtra(Constants.MESSAGE_DATA, payload);
-                
-                // Broadcasts the Intent to receivers in this app.
-                lbm.sendBroadcast(localIntent);
+                broadcastMessageViaIntent(topic, payload);
             }
 
             @Override
@@ -188,6 +178,14 @@ public class InuitsMqttService extends IntentService {
                 Log.d(TAG, "Delivered message: " + token.toString());
             }
         });
+    }
+
+    private void broadcastMessageViaIntent(String topic, String payload) {
+        // Broadcasts the Intent to receivers in this app.
+        Intent intent = new Intent(Constants.MESSAGE_RECEIVED);
+        intent.putExtra(Constants.MESSAGE_TOPIC, topic);
+        intent.putExtra(Constants.MESSAGE_DATA, payload);
+        sendBroadcast(intent);
     }
 
     /**
