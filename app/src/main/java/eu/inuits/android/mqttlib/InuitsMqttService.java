@@ -466,7 +466,8 @@ public class InuitsMqttService extends IntentService {
     private void broadcastMessageViaIntent(String topic, String payload) {
         Intent intent = new Intent(Constants.MESSAGE);
         intent.putExtra(Constants.MESSAGE_TOPIC, topic);
-        intent.setData(Uri.parse(payload));
+        intent.putExtra(Constants.MESSAGE_DATA, payload);
+//        intent.setData(Uri.parse(payload));
         sendBroadcast(intent);
     }
 

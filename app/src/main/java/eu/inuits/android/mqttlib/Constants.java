@@ -20,6 +20,7 @@ public final class Constants {
     public static final String DATA_QOS   = "eu.inuits.android.mqttlib.DATA_QOS";
 
     public static final String MESSAGE_TOPIC = "eu.inuits.android.mqttlib.MESSAGE_TOPIC";
+    public static final String MESSAGE_DATA = "eu.inuits.android.mqttlib.MESSAGE_DATA";
 
     public static final String RESPONSE_ERROR = "eu.inuits.android.mqttlib.RESPONSE_CONNECTED_ERROR";
 
