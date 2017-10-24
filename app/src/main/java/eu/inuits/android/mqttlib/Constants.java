@@ -15,6 +15,8 @@ public final class Constants {
 
     public static final String DATA_SERVER_URI = "eu.inuits.android.mqttlib.DATA_SERVER_URI";
     public static final String DATA_CLIENT_ID  = "eu.inuits.android.mqttlib.DATA_CLIENT_ID";
+    public static final String DATA_USERNAME  = "eu.inuits.android.mqttlib.DATA_USERNAME";
+    public static final String DATA_PASSWORD  = "eu.inuits.android.mqttlib.DATA_PASSWORD";
 
     public static final String DATA_TOPIC = "eu.inuits.android.mqttlib.DATA_TOPIC";
     public static final String DATA_QOS   = "eu.inuits.android.mqttlib.DATA_QOS";

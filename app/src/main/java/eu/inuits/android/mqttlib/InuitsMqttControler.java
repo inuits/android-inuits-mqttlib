@@ -50,7 +50,7 @@ public class InuitsMqttControler {
      * @param uri Whole URI path of the MQTT server. Example: "wss://example.com:443/mqtt"
      */
     public void connect(String uri) {
-        connect(uri, null);
+        connect(uri, null, null, null);
     }
 
     /**
@@ -58,11 +58,13 @@ public class InuitsMqttControler {
      * @param uri Whole URI path of the MQTT server. Example: "wss://example.com:443/mqtt"
      * @param clientId ClientId that is used to connect to the server
      */
-    public void connect(String uri, String clientId) {
+    public void connect(String uri, String clientId, String username, String password) {
         Intent mqttServiceIntent = new Intent(this.context, InuitsMqttService.class);
-        mqttServiceIntent.putExtra(Constants.ACTION,Constants.ACTION_CONNECT);
-        mqttServiceIntent.putExtra(Constants.DATA_SERVER_URI,uri);
-        mqttServiceIntent.putExtra(Constants.DATA_CLIENT_ID,clientId);
+        mqttServiceIntent.putExtra(Constants.ACTION, Constants.ACTION_CONNECT);
+        mqttServiceIntent.putExtra(Constants.DATA_SERVER_URI, uri);
+        mqttServiceIntent.putExtra(Constants.DATA_CLIENT_ID, clientId);
+        mqttServiceIntent.putExtra(Constants.DATA_USERNAME, username);
+        mqttServiceIntent.putExtra(Constants.DATA_PASSWORD, password);
         this.context.startService(mqttServiceIntent);
     }
 

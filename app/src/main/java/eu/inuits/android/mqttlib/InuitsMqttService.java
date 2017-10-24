@@ -3,6 +3,7 @@ package eu.inuits.android.mqttlib;
 import android.app.IntentService;
 import android.content.Intent;
 import android.net.Uri;
+import android.nfc.Tag;
 import android.util.Log;
 
 import org.eclipse.paho.android.service.MqttAndroidClient;
@@ -29,6 +30,7 @@ public class InuitsMqttService extends IntentService {
 
     //<editor-fold desc="Variable definitions" defaultstate="collapsed">
     private static MqttAndroidClient mqttAndroidClient;
+    private static MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
     private static Map<String, Integer> topics = new HashMap<>();
     //</editor-fold>
 
@@ -67,42 +69,46 @@ public class InuitsMqttService extends IntentService {
 
         Log.d(TAG, "Received intent of type: "+ action);
 
-        // Default variables because of reasons
-        String serverUri = null;
-        String clientId = null;
-        String topic = null;
-        Integer qos = null;
-
         // React on action
         switch (action) {
 
-            case Constants.ACTION_CONNECT:
+            case Constants.ACTION_CONNECT: {
                 // Get rest of the data
-                serverUri = workIntent.getStringExtra(Constants.DATA_SERVER_URI);
-                clientId = workIntent.getStringExtra(Constants.DATA_CLIENT_ID);
+                String serverUri = workIntent.getStringExtra(Constants.DATA_SERVER_URI);
+                String clientId = workIntent.getStringExtra(Constants.DATA_CLIENT_ID);
+                String username = workIntent.getStringExtra(Constants.DATA_USERNAME);
+                String password = workIntent.getStringExtra(Constants.DATA_PASSWORD);
 
                 if (serverUri == null) {
                     Log.e(TAG, "Server URI not specified, can't connect. Aborting!");
                     return;
                 }
 
-                if(clientId == null) {
+                if (clientId == null) {
                     clientId = UUID.randomUUID().toString();
                     Log.w(TAG, "Client ID not specified, generating random UUID: " + clientId);
                 }
 
-                this.initClient(serverUri, clientId);
+                if (username == null) {
+                    Log.d(TAG, "No username");
+                }
+
+                if (password == null) {
+                    Log.d(TAG, "No pasword");
+                }
+
+                this.initClient(serverUri, clientId, username, password);
                 this.connect();
                 break;
-
-            case Constants.ACTION_DISCONNECT:
+            }
+            case Constants.ACTION_DISCONNECT: {
                 this.disconnect();
                 break;
-
-            case Constants.ACTION_SUBSCRIBE:
+            }
+            case Constants.ACTION_SUBSCRIBE: {
                 // Get rest of the data
-                topic = workIntent.getStringExtra(Constants.DATA_TOPIC);
-                qos = workIntent.getIntExtra(Constants.DATA_QOS, Constants.QOS_DEFAULT_VALUE);
+                String topic = workIntent.getStringExtra(Constants.DATA_TOPIC);
+                Integer qos = workIntent.getIntExtra(Constants.DATA_QOS, Constants.QOS_DEFAULT_VALUE);
 
                 if (topic == null) {
                     Log.e(TAG, "Topic not specified, can't subscribe to unknown topic. Aborting!");
@@ -110,9 +116,9 @@ public class InuitsMqttService extends IntentService {
                 }
                 this.subscribe(topic, qos);
                 break;
-
-            case Constants.ACTION_UNSUBSCRIBE:
-                topic = workIntent.getStringExtra(Constants.DATA_TOPIC);
+            }
+            case Constants.ACTION_UNSUBSCRIBE: {
+                String topic = workIntent.getStringExtra(Constants.DATA_TOPIC);
 
                 if (topic == null) {
                     Log.e(TAG, "Topic not specified, can't unsubscribe from unknown topic. Aborting!");
@@ -120,20 +126,35 @@ public class InuitsMqttService extends IntentService {
                 }
                 this.unsubscribe(topic);
                 break;
-
-            case Constants.ACTION_PUBLISH:
-                topic = workIntent.getStringExtra(Constants.DATA_TOPIC);
+            }
+            case Constants.ACTION_PUBLISH: {
+                String topic = workIntent.getStringExtra(Constants.DATA_TOPIC);
                 if (topic == null) {
                     Log.e(TAG, "Topic not specified, can't publish to unknown topic. Aborting!");
                     return;
                 }
                 this.publish(topic, workIntent.getDataString());
                 break;
+            }
         }
     }
     //</editor-fold>
 
     //<editor-fold desc="Main methods" defaultstate="collapsed">
+
+    /**
+     * Wrapper for initClient (String serverUri, String clientId, String username, String password)
+     * This will not set username and password (will set to null)
+     * See Doc for the other method for more information
+     *
+     * @param serverUri Server URI for MQTT. Eg. "wss://example.com/mqtt"
+     * @param clientId Client ID that is used in MQTT communications
+     * @return returns instance of the client
+     */
+    public MqttAndroidClient initClient(String serverUri, String clientId) {
+        return this.initClient(serverUri, clientId, null, null);
+    }
+
     /**
      * This methods inits the MQTT client if it was not initialized before.
      * !NOTE - this method does have effect only the first time called.
@@ -144,11 +165,25 @@ public class InuitsMqttService extends IntentService {
      * TODO: the change in serverUri and clientId are not changed after the client is initialized.
      * @param serverUri Server URI for MQTT. Eg. "wss://example.com/mqtt"
      * @param clientId Client ID that is used in MQTT communications
+     * @param username Username for MQTT connection
+     * @param password Password for MQTT connection
      * @return returns instance of the client
      */
-    public MqttAndroidClient initClient(String serverUri, String clientId) {
+    public MqttAndroidClient initClient(String serverUri, String clientId, String username, String password) {
         if (InuitsMqttService.topics == null) {
             InuitsMqttService.topics = new HashMap<>();
+        }
+        if (InuitsMqttService.mqttConnectOptions == null) {
+            InuitsMqttService.mqttConnectOptions = new MqttConnectOptions();
+            if (username != null) {
+                InuitsMqttService.mqttConnectOptions.setUserName(username);
+            }
+            if (password != null) {
+                InuitsMqttService.mqttConnectOptions.setPassword(password.toCharArray());
+            }
+            // TODO: add more options as needed
+            InuitsMqttService.mqttConnectOptions.setAutomaticReconnect(true);
+            InuitsMqttService.mqttConnectOptions.setCleanSession(true);
         }
         if (InuitsMqttService.mqttAndroidClient == null) {
             InuitsMqttService.mqttAndroidClient = new MqttAndroidClient(getApplicationContext(), serverUri, clientId);
@@ -220,6 +255,7 @@ public class InuitsMqttService extends IntentService {
      * This method will connect to MQTT and subscribe to topics that are stored globally.
      */
     public void connect() {
+//        this.disconnect();
         if (InuitsMqttService.mqttAndroidClient == null) {
             Log.w(TAG, "mqttAndroidClient not initialized!");
             return;
@@ -227,7 +263,7 @@ public class InuitsMqttService extends IntentService {
 
         try {
             Log.d(TAG, "Connecting to: " + InuitsMqttService.mqttAndroidClient.getServerURI());
-            InuitsMqttService.mqttAndroidClient.connect(this.getMqttConnectOptions(), null, new IMqttActionListener() {
+            InuitsMqttService.mqttAndroidClient.connect(InuitsMqttService.getMqttConnectOptions(), null, new IMqttActionListener() {
                 @Override
                 public void onSuccess(IMqttToken asyncActionToken) {
                     DisconnectedBufferOptions disconnectedBufferOptions = new DisconnectedBufferOptions();
@@ -257,11 +293,12 @@ public class InuitsMqttService extends IntentService {
      *
      * @return MqttConnectOptions object with reasonable default settings
      */
-    private MqttConnectOptions getMqttConnectOptions() {
-        MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
-        mqttConnectOptions.setAutomaticReconnect(true);
-        mqttConnectOptions.setCleanSession(true);
-        return mqttConnectOptions;
+    private static MqttConnectOptions getMqttConnectOptions() {
+        if (InuitsMqttService.mqttConnectOptions == null) {
+            Log.w(TAG, "mqttConnectOption is null and it shouldn't be! Returning empty options, which may not be what you wanted.");
+            InuitsMqttService.mqttConnectOptions = new MqttConnectOptions();
+        }
+        return InuitsMqttService.mqttConnectOptions;
     }
 
     /**
