@@ -30,7 +30,7 @@ public class InuitsMqttService extends IntentService {
 
     //<editor-fold desc="Variable definitions" defaultstate="collapsed">
     private static MqttAndroidClient mqttAndroidClient;
-    private static MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
+    private static MqttConnectOptions mqttConnectOptions;
     private static Map<String, Integer> topics = new HashMap<>();
     //</editor-fold>
 
