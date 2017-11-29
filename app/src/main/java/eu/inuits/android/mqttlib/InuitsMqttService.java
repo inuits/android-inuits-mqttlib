@@ -16,6 +16,7 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -190,6 +191,14 @@ public class InuitsMqttService extends IntentService {
 
             this.setupCallbacks();
         }
+
+        DisconnectedBufferOptions disconnectedBufferOptions = new DisconnectedBufferOptions();
+        disconnectedBufferOptions.setBufferEnabled(true);
+        disconnectedBufferOptions.setBufferSize(1000);
+        disconnectedBufferOptions.setPersistBuffer(true);
+        disconnectedBufferOptions.setDeleteOldestMessages(false);
+        InuitsMqttService.mqttAndroidClient.setBufferOpts(disconnectedBufferOptions);
+
         return InuitsMqttService.mqttAndroidClient;
     }
 
@@ -266,13 +275,6 @@ public class InuitsMqttService extends IntentService {
             InuitsMqttService.mqttAndroidClient.connect(InuitsMqttService.getMqttConnectOptions(), null, new IMqttActionListener() {
                 @Override
                 public void onSuccess(IMqttToken asyncActionToken) {
-                    DisconnectedBufferOptions disconnectedBufferOptions = new DisconnectedBufferOptions();
-                    disconnectedBufferOptions.setBufferEnabled(true);
-                    disconnectedBufferOptions.setBufferSize(100);
-                    disconnectedBufferOptions.setPersistBuffer(false);
-                    disconnectedBufferOptions.setDeleteOldestMessages(false);
-                    InuitsMqttService.mqttAndroidClient.setBufferOpts(disconnectedBufferOptions);
-
                     subscribeToTopics();
                 }
 
@@ -527,7 +529,7 @@ public class InuitsMqttService extends IntentService {
         Intent intent = new Intent(Constants.RESPONSE);
         intent.putExtra(responseType, responseMessage);
         if (error != null) {
-            intent.putExtra(Constants.RESPONSE_ERROR, error.getStackTrace());
+            intent.putExtra(Constants.RESPONSE_ERROR, Arrays.toString(error.getStackTrace()));
         }
         sendBroadcast(intent);
     }

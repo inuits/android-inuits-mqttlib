@@ -29,7 +29,7 @@ public final class Constants {
     public static final String RESPONSE_CONNECTION_LOST  = "eu.inuits.android.mqttlib.RESPONSE_CONNECTION_LOST";
     public static final String RESPONSE_CONNECTION_ERROR = "eu.inuits.android.mqttlib.RESPONSE_CONNECTION_ERROR";
 
-    public static final String RESPONSE_SUBSCRIBE_ERROR = "eu.inuits.android.mqttlib.RESPONSE_CONNECTION_ERROR";
+    public static final String RESPONSE_SUBSCRIBE_ERROR = "eu.inuits.android.mqttlib.RESPONSE_SUBSCRIBE_ERROR";
 
     /* QOS */
     public static final int QOS_AT_MOST_ONCE  = 0;
