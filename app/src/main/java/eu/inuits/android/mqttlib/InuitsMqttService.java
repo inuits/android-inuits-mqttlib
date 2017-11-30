@@ -192,13 +192,6 @@ public class InuitsMqttService extends IntentService {
             this.setupCallbacks();
         }
 
-        DisconnectedBufferOptions disconnectedBufferOptions = new DisconnectedBufferOptions();
-        disconnectedBufferOptions.setBufferEnabled(true);
-        disconnectedBufferOptions.setBufferSize(1000);
-        disconnectedBufferOptions.setPersistBuffer(true);
-        disconnectedBufferOptions.setDeleteOldestMessages(false);
-        InuitsMqttService.mqttAndroidClient.setBufferOpts(disconnectedBufferOptions);
-
         return InuitsMqttService.mqttAndroidClient;
     }
 
@@ -275,6 +268,16 @@ public class InuitsMqttService extends IntentService {
             InuitsMqttService.mqttAndroidClient.connect(InuitsMqttService.getMqttConnectOptions(), null, new IMqttActionListener() {
                 @Override
                 public void onSuccess(IMqttToken asyncActionToken) {
+
+                    DisconnectedBufferOptions disconnectedBufferOptions = new DisconnectedBufferOptions();
+                    disconnectedBufferOptions.setBufferEnabled(true);
+                    disconnectedBufferOptions.setBufferSize(1000);
+                    disconnectedBufferOptions.setPersistBuffer(true);
+                    disconnectedBufferOptions.setDeleteOldestMessages(false);
+                    InuitsMqttService.mqttAndroidClient.setBufferOpts(disconnectedBufferOptions);
+
+                    broadcastResponseViaIntent(Constants.RESPONSE_CONNECTION_SUCCESS, "Successfully connected to: " + InuitsMqttService.mqttAndroidClient.getServerURI());
+
                     subscribeToTopics();
                 }
 
