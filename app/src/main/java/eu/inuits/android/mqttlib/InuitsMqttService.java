@@ -184,7 +184,7 @@ public class InuitsMqttService extends IntentService {
             }
             // TODO: add more options as needed
             InuitsMqttService.mqttConnectOptions.setAutomaticReconnect(true);
-            InuitsMqttService.mqttConnectOptions.setCleanSession(true);
+            InuitsMqttService.mqttConnectOptions.setCleanSession(false);
         }
         if (InuitsMqttService.mqttAndroidClient == null) {
             InuitsMqttService.mqttAndroidClient = new MqttAndroidClient(getApplicationContext(), serverUri, clientId);
@@ -209,8 +209,11 @@ public class InuitsMqttService extends IntentService {
                 }
                 if (reconnect) {
                     Log.d(TAG, "Reconnected to: " + serverUri);
+
                     // If Clean Session is true, we need to re-subscribe
-                    subscribeToTopics();
+                    if (InuitsMqttService.mqttConnectOptions.isCleanSession()) {
+                        subscribeToTopics();
+                    }
                     return;
                 }
 
